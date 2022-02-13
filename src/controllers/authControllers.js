@@ -1,5 +1,6 @@
 const { User } = require("../models");
 const jwt = require("jsonwebtoken");
+const bcrypt = require('bcryptjs');
 
 exports.register = async (req, res) => {
   try {
@@ -9,7 +10,9 @@ exports.register = async (req, res) => {
       return;
     }
 
-    const newUser = await User.create(req.body);
+    const newUser = new User(req.body);
+    await newUser.hashPassword(req.body.password);
+    await newUser.save();
 
     const payload = {
       _id: newUser._id,
@@ -21,7 +24,7 @@ exports.register = async (req, res) => {
 
     res.json({
       user: {
-        ...req.body,
+        newUser,
         token: jwToken,
       },
     });
@@ -35,7 +38,7 @@ exports.login = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (!user || !(await user.validPassword(req.body.password))) {
-      res.status(401).json({ message: "Email or password is wrong." });
+      res.status(400).json({ message: "Email or password is wrong." });
       return;
     }
 
@@ -49,7 +52,7 @@ exports.login = async (req, res) => {
 
     res.json({
       user: {
-        ...req.body,
+        user,
         token: jwToken,
       },
     });
@@ -69,8 +72,8 @@ exports.logout = async (req, res) => {
     }
 
     req.user.token = null;
-
-    res.status(204).json();
+    await existingUser.save();
+    res.status(204).json({ message: "User logged out." });
   } catch (error) {
     console.log(error);
     res.status(500).send(error);

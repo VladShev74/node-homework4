@@ -26,9 +26,12 @@ const User = new Schema({
   },
 });
 
-User.pre("save", async function () {
-  this.password = await bcrypt.hash(this.password, 12);
-});
+// User.pre("save", async function () {
+//   this.password = await bcrypt.hash(this.password, 12);
+// });
+User.methods.hashPassword = async function (password) {
+    this.password = await bcrypt.hash(password, 12);
+};
 
 User.methods.validPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
